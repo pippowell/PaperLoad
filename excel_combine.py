@@ -1,4 +1,6 @@
 import pandas as pd
+import os
+import datetime
 
 def multi_line(text, max_length):
 
@@ -22,20 +24,23 @@ def multi_line(text, max_length):
 
 
 # locates entries that are unique across the files while leaving duplicate entries within the files
-def find_unique_entries(file1, file2, combined_file, duplicates_file, column, keep_dups):
+def find_unique_entries(files, combined_file, duplicates_file, column, keep_dups):
 
     # load the files
-    df1 = pd.read_excel(file1)
-    df2 = pd.read_excel(file2)
+    raw_csvs = {}
+
+    for i,file in enumerate(files):
+        filepath = os.path.join(os.getcwd(), 'raw_files',file)
+        df = pd.read_csv(filepath)
+        df['source'] = f'file{i}'
+        raw_csvs[i] = df
 
     dup_across = []
 
-    # track source file
-    df1['source'] = 'file1'
-    df2['source'] = 'file2'
+    print(raw_csvs[1])
 
     # combine their dataframes
-    combined = pd.concat([df1, df2])
+    combined = pd.concat(raw_csvs.values(), ignore_index=True)
 
     if keep_dups:
 
@@ -68,15 +73,15 @@ def find_unique_entries(file1, file2, combined_file, duplicates_file, column, ke
 
     return dup_across
 
-
-file1 = "C:/Users/powel/Documents/how-can-I-detect-water-stress-in-vegetables-using-cameras-and-sensors_2025-02-13091439_export.xlsx"
-file2 = "C:/Users/powel/Documents/how-can-I-detect-water-stress-in-vegetables-using-cameras-and-sensors_2025-02-13093029_export.xlsx"
-combined_file = 'C:/Users/powel/Documents/water_stress_detection_vegetables_papers.xlsx'
-duplicates_file = 'C:/Users/powel/Documents/duplicate_papers.xlsx'
+files = os.listdir(os.path.join(os.getcwd(), 'raw_files'))
+work_dir = os.getcwd()
+timestamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+combined_file = os.path.join(work_dir,'outputs',f'{timestamp}_combined_papers.xlsx')
+duplicates_file = os.path.join(work_dir,'outputs',f'{timestamp}_duplicates.xlsx')
 column = 'title'
 keep_dups = True
 
-find_unique_entries(file1, file2, combined_file, duplicates_file, column, keep_dups)
+find_unique_entries(files, combined_file, duplicates_file, column, keep_dups)
 
 
 
