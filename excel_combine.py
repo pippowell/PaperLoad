@@ -24,7 +24,7 @@ def multi_line(text, max_length):
 
 
 # locates entries that are unique across the files while leaving duplicate entries within the files
-def find_unique_entries(files, combined_file, duplicates_file, column, keep_dups):
+def find_unique_entries(files, combined_file, duplicates_file, frequent_duplicates_file, column, keep_dups):
 
     # load the files
     raw_csvs = {}
@@ -37,10 +37,14 @@ def find_unique_entries(files, combined_file, duplicates_file, column, keep_dups
 
     dup_across = []
 
-    print(raw_csvs[1])
-
     # combine their dataframes
     combined = pd.concat(raw_csvs.values(), ignore_index=True)
+
+    final_columns = ['source','date','title','doi','authors','journal','short_journal','volume','year','publisher','issue','page','abstract']
+
+    combined = combined[final_columns]
+
+    print(f'Total number of papers across all provided files before duplication removal: {len(combined)}')
 
     if keep_dups:
 
@@ -49,7 +53,9 @@ def find_unique_entries(files, combined_file, duplicates_file, column, keep_dups
 
         dups = combined[find_dups]
 
-        dups.to_excel('dups.xlsx', index=False)
+        dups.to_excel(duplicates_file, index=False)
+
+        print(f'Combined file with all duplicates created at {combined_file}')
 
         dup_counts = dups[column].value_counts()
 
@@ -57,31 +63,36 @@ def find_unique_entries(files, combined_file, duplicates_file, column, keep_dups
 
         final_dups = dups[dups[column].isin(dups_three_plus)]
 
-        final_dups_multiline = final_dups.applymap(lambda x: multi_line(x, 300) if isinstance(x, str) else x)
+        final_dups_multiline = final_dups.map(lambda x: multi_line(x, 300) if isinstance(x, str) else x)
 
-        final_dups_multiline.to_excel(duplicates_file,index=False)
+        final_dups_multiline.to_excel(frequent_duplicates_file,index=False)
+
+        print(f'Combined file with frequent duplicates created at {combined_file}')
 
     # remove duplicates based on the desired field
     unique = combined.drop_duplicates(subset=[column], keep='first')
 
-    unique_multiline = unique.applymap(lambda x: multi_line(x, 150) if isinstance(x, str) else x)
+    unique_multiline = unique.map(lambda x: multi_line(x, 150) if isinstance(x, str) else x)
 
     # save the unique entries
     unique_multiline.to_excel(combined_file, index=False)
 
-    print(f'Combined file with unique entries only created as {combined_file}')
+    print(f'Total number of papers across all provided files after duplication removal: {len(unique_multiline)}')
+
+    print(f'Final cleaned file with only unique papers created at {combined_file}')
 
     return dup_across
 
 files = os.listdir(os.path.join(os.getcwd(), 'raw_files'))
 work_dir = os.getcwd()
 timestamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-combined_file = os.path.join(work_dir,'outputs',f'{timestamp}_combined_papers.xlsx')
-duplicates_file = os.path.join(work_dir,'outputs',f'{timestamp}_duplicates.xlsx')
-column = 'title'
+combined_file = os.path.join(work_dir,'outputs',f'{timestamp}_cleaned.xlsx')
+duplicates_file = os.path.join(work_dir,'outputs',f'{timestamp}_all_duplicates.xlsx')
+frequent_duplicates_file = os.path.join(work_dir,'outputs',f'{timestamp}_frequent_duplicates.xlsx')
+column = 'doi'
 keep_dups = True
 
-find_unique_entries(files, combined_file, duplicates_file, column, keep_dups)
+find_unique_entries(files, combined_file, duplicates_file, frequent_duplicates_file, column, keep_dups)
 
 
 
